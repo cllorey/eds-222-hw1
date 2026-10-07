@@ -1,7 +1,7 @@
 ---
 title: EDS 222 HW1
 subtitle: Foundations of inference
-author: Your Name Here
+author: Courtney Lorey
 ---
 
 ## 1. Conduct a permutation test
@@ -17,6 +17,80 @@ To perform this test, you'll need the `exide-property-covariates.csv` file found
 The question is about _average lead soil concentrations_. You'll need to first get the average lead soil concentration for each property, then join your result to the property covariate data to get the year the house was built.
 
 :::
+
+$H_0$: There is no difference in average lead soil concentrations between homes built before and after 1970.
+
+$H_A$: Homes built pre-1970 have higher average lead soil concentrations.
+
+```{r}
+# Load packages, set seed
+library(tidyverse)
+set.seed(222)
+
+# Load data
+properties <- read_csv('/courses/EDS222/data/exide-property-covariates.csv')
+soil <- read_csv('/courses/EDS222/data/exide-soil-cores.csv')
+
+# Remove properties that don't have a year_built
+properties <- properties |> 
+    drop_na(year_built) # This removed 10 NA rows
+
+# Get the average lead soil concentration for each property
+avg_ppm <- soil |> 
+    summarize(mean_pb_ppm = mean(pb_ppm), .by = property_id)
+
+# Join data
+soil_cores <- left_join(properties, avg_ppm, by = join_by(property_id))
+
+# Add a column that distinguishes pre and post 1970
+soil_cores <- soil_cores |>
+    mutate(pre1970 = (year_built < 1970)) 
+
+# Summarize to get the difference in mean lead ppm between pre and post 1970 houses
+soil_means_pre_post <- soil_cores |> 
+    summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |> 
+    arrange(pre1970)
+
+# Find the observed difference in means
+obs_diff_means <- soil_means_pre_post$mean_pre_post[2] - soil_means_pre_post$mean_pre_post[1]
+
+# Shuffle the predictor variable and recalculate the statistic 
+shuffled_year <- soil_cores |>
+  mutate(pre1970 = sample(pre1970)) |>
+  summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |> 
+  arrange(pre1970)
+
+shuffled_diff_means <- shuffled_year$mean_pre_post[2] -
+  shuffled_year$mean_pre_post[1]
+
+# Repeat shuffle
+year_null_dist <- replicate(
+  1e4,
+  {
+    shuffled_year <- soil_cores |>
+        mutate(pre1970 = sample(pre1970)) |>
+        summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |> 
+        arrange(pre1970)
+        
+    shuffled_year$mean_pre_post[2] - shuffled_year$mean_pre_post[1]
+  }
+)
+
+# Visualize the null vs. the observed value
+tibble(diff_means = year_null_dist) |>
+  ggplot(aes(diff_means)) +
+  geom_histogram(binwidth = 5) + 
+  geom_vline(xintercept = obs_diff_means, color = 'magenta')
+
+# Calculate the p-value
+pval <- mean(year_null_dist >= obs_diff_means)
+pval
+
+```
+
+### Interpreting our results
+
+Based on our p-value of 0, we reject the null hypothesis and have sufficient evidence to support the alternate hypothesis, that homes built pre-1970 have higher average lead soil concentrations.
 
 ## 2. Estimate a confidence interval
 
