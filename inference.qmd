@@ -32,32 +32,33 @@ properties <- read_csv('/courses/EDS222/data/exide-property-covariates.csv')
 soil <- read_csv('/courses/EDS222/data/exide-soil-cores.csv')
 
 # Remove properties that don't have a year_built
-properties <- properties |> 
-    drop_na(year_built) # This removed 10 NA rows
+properties <- properties |>
+  drop_na(year_built) # This removed 10 NA rows
 
 # Get the average lead soil concentration for each property
-avg_ppm <- soil |> 
-    summarize(mean_pb_ppm = mean(pb_ppm), .by = property_id)
+avg_ppm <- soil |>
+  summarize(mean_pb_ppm = mean(pb_ppm), .by = property_id)
 
 # Join data
 soil_cores <- left_join(properties, avg_ppm, by = join_by(property_id))
 
 # Add a column that distinguishes pre and post 1970
 soil_cores <- soil_cores |>
-    mutate(pre1970 = (year_built < 1970)) 
+  mutate(pre1970 = (year_built < 1970))
 
 # Summarize to get the difference in mean lead ppm between pre and post 1970 houses
-soil_means_pre_post <- soil_cores |> 
-    summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |> 
-    arrange(pre1970)
+soil_means_pre_post <- soil_cores |>
+  summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |>
+  arrange(pre1970)
 
 # Find the observed difference in means
-obs_diff_means <- soil_means_pre_post$mean_pre_post[2] - soil_means_pre_post$mean_pre_post[1]
+obs_diff_means <- soil_means_pre_post$mean_pre_post[2] -
+  soil_means_pre_post$mean_pre_post[1]
 
-# Shuffle the predictor variable and recalculate the statistic 
+# Shuffle the predictor variable and recalculate the statistic
 shuffled_year <- soil_cores |>
   mutate(pre1970 = sample(pre1970)) |>
-  summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |> 
+  summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |>
   arrange(pre1970)
 
 shuffled_diff_means <- shuffled_year$mean_pre_post[2] -
@@ -68,10 +69,10 @@ year_null_dist <- replicate(
   1e4,
   {
     shuffled_year <- soil_cores |>
-        mutate(pre1970 = sample(pre1970)) |>
-        summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |> 
-        arrange(pre1970)
-        
+      mutate(pre1970 = sample(pre1970)) |>
+      summarize(mean_pre_post = mean(mean_pb_ppm), .by = pre1970) |>
+      arrange(pre1970)
+
     shuffled_year$mean_pre_post[2] - shuffled_year$mean_pre_post[1]
   }
 )
@@ -79,13 +80,12 @@ year_null_dist <- replicate(
 # Visualize the null vs. the observed value
 tibble(diff_means = year_null_dist) |>
   ggplot(aes(diff_means)) +
-  geom_histogram(binwidth = 5) + 
+  geom_histogram(binwidth = 5) +
   geom_vline(xintercept = obs_diff_means, color = 'magenta')
 
 # Calculate the p-value
 pval <- mean(year_null_dist >= obs_diff_means)
 pval
-
 ```
 
 ### Interpreting our results
@@ -99,23 +99,21 @@ Estimate a confidence interval to investigate the following question:
 > How much is the difference in average lead soil concentrations between properties within 1km of a freeway and those farther away?
 
 ```{r}
-# Add a column that distinguishes concentrations within 1km of a freeway from those farther away 
+# Add a column that distinguishes concentrations within 1km of a freeway from those farther away
 soil_cores <- soil_cores |>
-  mutate(dist_to_freeway_km = dist_to_freeway_m / 1000) |> 
+  mutate(dist_to_freeway_km = dist_to_freeway_m / 1000) |>
   mutate(close = (dist_to_freeway_km <= 1))
-soil_cores 
 
 # Summarize to get the difference in mean distance
-soil_mean_distance <- soil_cores |> 
-    summarize(means_by_distance = mean(mean_pb_ppm), .by = close) |> 
-    arrange(close)
-soil_mean_distance
+soil_mean_distance <- soil_cores |>
+  summarize(means_by_distance = mean(mean_pb_ppm), .by = close) |>
+  arrange(close)
 
 # Find the observed difference in means
-obs_diff_mean <- soil_mean_distance$means_by_distance[2] - soil_mean_distance$means_by_distance[1]
-obs_diff_mean
+obs_diff_mean <- soil_mean_distance$means_by_distance[2] -
+  soil_mean_distance$means_by_distance[1]
 
-# ASK: DID WE SUBTRACT THESE PROPERLY? HOW TO KNOW? 
+# ASK: DID WE SUBTRACT THESE PROPERLY? HOW TO KNOW?
 
 # Resample observations and recalculate the statistic
 samp_dist <- replicate(
@@ -130,19 +128,16 @@ samp_dist <- replicate(
       resampled$means_by_distance[1]
   }
 )
-head(samp_dist)
 
 # Find the confidence interval
 area_95ci <- quantile(samp_dist, c(0.025, 0.975))
-area_95ci
 
 # Visualize the sampling distribution
 tibble(diff_means = samp_dist) |>
   ggplot(aes(diff_means)) +
-  geom_histogram(binwidth = 5) + 
+  geom_histogram(binwidth = 5) +
   geom_vline(xintercept = obs_diff_mean, color = 'magenta') +
   geom_vline(xintercept = area_95ci, linetype = 'dashed')
-
 ```
 
 ### Interpreting our results
@@ -157,8 +152,7 @@ Our confidence interval estimates that 95% of time, the difference in lead expos
 
 if you repeat the same sampling 100, 95% of resulting intervals will capture the true population parameter 
 
-### ASK ABOUT THIS
-
+we are 95% confident that the true diff in avd lead soil concen bw propertiees within 1km of a freeway and those farther away lies between 40.70573 and 102.95075 ppm. 
 
 
 ## 3. Simulate a negative result
@@ -168,9 +162,93 @@ Recall that a p-value is the probability of observing your sample _if_ the null 
 To simulate a negative result, perform the following.
 
 1. Define a normally-distributed population. Pick any mean and standard deviation.
+
 2. Draw a sample of 50 observations from this population. Assign the first 25 to group A and the second 25 to group B.
+
+```{r}
+# Pull two rnorms of 25 with the same mean and sd
+group_a <- rnorm(n = 25, mean = 50, sd = 2)
+group_b <- rnorm(n = 25, mean = 50, sd = 2)
+
+obs_diff_m <- mean(group_a) - mean(group_b)
+```
+
 3. Conduct a permutation test to investigate whether the mean of group A is greater than the mean of group B.
+
+```{r}
+# Put them together
+pooled <- c(group_a, group_b)
+
+# Shuffle them up
+shuffle_pool <- sample(pooled)
+
+# Redivide
+shuffled_a <- shuffle_pool[1:25]
+shuffled_b <- shuffle_pool[26:50]
+
+# Recalculate the statistic
+mean(shuffled_a) - mean(shuffled_b)
+
+# Repeat shuffle
+ab_null_dist <- replicate(
+  1e4,
+  {
+    shuffle_pool <- sample(pooled)
+    shuffled_a <- shuffle_pool[1:25]
+    shuffled_b <- shuffle_pool[26:50]
+
+    mean(shuffled_a) - mean(shuffled_b)
+  }
+)
+```
+
 4. Record your p-value.
+
+```{r}
+p <- mean(ab_null_dist > obs_diff_m)
+```
+
 5. Repeat the simulation 1,000 times.
 
+```{r}
+# Nested replicate call, or write a function that does this simulation once then replicate that function 1000x
+
+p_dist <- replicate(
+  1000,
+  {
+    group_a <- rnorm(n = 25, mean = 50, sd = 2)
+    group_b <- rnorm(n = 25, mean = 50, sd = 2)
+    obs_diff_m <- mean(group_a) - mean(group_b)
+    null_dist <- replicate(
+      1000,
+      {
+        pooled <- c(group_a, group_b)
+        shuffle_pool <- sample(pooled)
+        shuffled_a <- shuffle_pool[1:25]
+        shuffled_b <- shuffle_pool[26:50]
+        mean(shuffled_a) - mean(shuffled_b)
+      }
+    )
+    mean(null_dist > obs_diff_m)
+  }
+)
+```
+
 When you're done, verify that your p-value is less than 0.05 in approximately 5% (50) of your simulations.
+
+```{r}
+# Visualize 
+
+tibble(p_dist) |>
+  ggplot(aes(p_dist)) +
+  geom_histogram(fill = "cornflowerblue", color = "black", binwidth = .02) +
+  geom_vline(xintercept = .05, color = 'magenta') +
+  labs(
+    title = "Distribution of p-values",
+    x = "p-value",
+    y = "Count"
+  )
+
+# Verify 
+mean(p_dist < .05)
+```
