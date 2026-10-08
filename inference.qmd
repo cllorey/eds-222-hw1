@@ -90,13 +90,76 @@ pval
 
 ### Interpreting our results
 
-Based on our p-value of 0, we reject the null hypothesis and have sufficient evidence to support the alternate hypothesis, that homes built pre-1970 have higher average lead soil concentrations.
+Based on our p-value of 0, which is less than the significance level (α = .05), we reject the null hypothesis that there is no difference in average lead soil concentrations between homes built before and after 1970, and have sufficient evidence to support the alternate hypothesis, that homes built pre-1970 have higher average lead soil concentrations.
 
 ## 2. Estimate a confidence interval
 
 Estimate a confidence interval to investigate the following question:
 
 > How much is the difference in average lead soil concentrations between properties within 1km of a freeway and those farther away?
+
+```{r}
+# Add a column that distinguishes concentrations within 1km of a freeway from those farther away 
+soil_cores <- soil_cores |>
+  mutate(dist_to_freeway_km = dist_to_freeway_m / 1000) |> 
+  mutate(close = (dist_to_freeway_km <= 1))
+soil_cores 
+
+# Summarize to get the difference in mean distance
+soil_mean_distance <- soil_cores |> 
+    summarize(means_by_distance = mean(mean_pb_ppm), .by = close) |> 
+    arrange(close)
+soil_mean_distance
+
+# Find the observed difference in means
+obs_diff_mean <- soil_mean_distance$means_by_distance[2] - soil_mean_distance$means_by_distance[1]
+obs_diff_mean
+
+# ASK: DID WE SUBTRACT THESE PROPERLY? HOW TO KNOW? 
+
+# Resample observations and recalculate the statistic
+samp_dist <- replicate(
+  1e4,
+  {
+    resampled <- soil_cores |>
+      slice_sample(n = nrow(soil_cores), replace = TRUE) |>
+      summarize(means_by_distance = mean(mean_pb_ppm), .by = close) |>
+      arrange(close)
+
+    resampled$means_by_distance[2] -
+      resampled$means_by_distance[1]
+  }
+)
+head(samp_dist)
+
+# Find the confidence interval
+area_95ci <- quantile(samp_dist, c(0.025, 0.975))
+area_95ci
+
+# Visualize the sampling distribution
+tibble(diff_means = samp_dist) |>
+  ggplot(aes(diff_means)) +
+  geom_histogram(binwidth = 5) + 
+  geom_vline(xintercept = obs_diff_mean, color = 'magenta') +
+  geom_vline(xintercept = area_95ci, linetype = 'dashed')
+
+```
+
+### Interpreting our results
+Based on your confidence interval, how much could the difference in lead exposure between close and far away be?
+
+2.5%     97.5% 
+ 40.70573 102.95075 
+
+Def of confidence interval - Range of values you are confident contain the pop parameter. If repeated 100 times, about 95 of those confidence intervals would contain population parameter
+
+Our confidence interval estimates that 95% of time, the difference in lead exposure between properties within 1km of a freeway and those farther away will fall within the the interval 40.7 ppm and 102.95 ppm. 
+
+if you repeat the same sampling 100, 95% of resulting intervals will capture the true population parameter 
+
+### ASK ABOUT THIS
+
+
 
 ## 3. Simulate a negative result
 
