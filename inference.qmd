@@ -44,7 +44,25 @@ soil_cores <- left_join(properties, avg_ppm, by = join_by(property_id))
 
 # Add a column that distinguishes pre and post 1970
 soil_cores <- soil_cores |>
-  mutate(pre1970 = (year_built < 1970))
+  mutate(pre1970 = year_built < 1970)
+
+# Visualize the "raw" data
+
+soil_cores |> 
+  ggplot(aes(x = as.factor(pre1970), y = mean_pb_ppm)) +
+  geom_boxplot(fill = 'cornflowerblue') +
+  scale_y_continuous(
+    name = "Average lead concentration (ppm)",
+    limits = c(0, 900)
+  ) + 
+  scale_x_discrete(
+    name = "Year",
+    labels = c("FALSE" = "Post-1970", "TRUE" = "Pre-1970")
+  ) + 
+  labs(
+    title = "Average lead concentration by property, before and after 1970"
+  ) +
+  theme_bw()
 
 # Summarize to get the difference in mean lead ppm between pre and post 1970 houses
 soil_means_pre_post <- soil_cores |>
@@ -81,16 +99,24 @@ year_null_dist <- replicate(
 tibble(diff_means = year_null_dist) |>
   ggplot(aes(diff_means)) +
   geom_histogram(binwidth = 5) +
-  geom_vline(xintercept = obs_diff_means, color = 'magenta')
+  geom_vline(xintercept = obs_diff_means, color = 'magenta') +
+  labs(
+    title = "Null Distribution",
+    x = "Difference in means",
+    y = "Count"
+  ) +
+  theme_bw()
 
 # Calculate the p-value
-pval <- mean(year_null_dist >= obs_diff_means)
-pval
+pval <- mean(year_null_dist > obs_diff_means)
+
 ```
 
 ### Interpreting our results
 
-Based on our p-value of 0, which is less than the significance level (α = .05), we reject the null hypothesis that there is no difference in average lead soil concentrations between homes built before and after 1970, and have sufficient evidence to support the alternate hypothesis, that homes built pre-1970 have higher average lead soil concentrations.
+Based on our p-value of 0, which is less than the significance level (α = .05), we reject the null hypothesis that there is no difference in average lead soil concentrations between homes built before and after 1970, and have sufficient evidence to support the alternate hypothesis, that homes built pre-1970 have higher average lead soil concentrations. 
+
+A note on the null distribution visualization: the rubric requires that the part of the null distribution corresponding to the p-value is indicated. Since there are no values to the right of the observed difference in means, I was unable to visually indicate this on the plot. In theory, anything to the right of the observed value would have represented the part of the null distribution corresponding to the p-value (the chance of getting values as or more "extreme" as the one observed). 
 
 ## 2. Estimate a confidence interval
 
@@ -104,6 +130,24 @@ soil_cores <- soil_cores |>
   mutate(dist_to_freeway_km = dist_to_freeway_m / 1000) |>
   mutate(close = (dist_to_freeway_km <= 1))
 
+# Visualize the "raw" data
+
+soil_cores |> 
+  ggplot(aes(x = close, y = mean_pb_ppm)) +
+  geom_boxplot(fill = 'cornflowerblue') +
+  scale_y_continuous(
+    name = "Average lead concentration (ppm)",
+    limits = c(0, 900)
+  ) + 
+  scale_x_discrete(
+    name = "Distance to Freeway",
+    labels = c("Beyond 1km", "Within 1km")
+  ) + 
+  labs(
+    title = "Average lead concentration by property and distance to freeway"
+  ) +
+  theme_bw()
+
 # Summarize to get the difference in mean distance
 soil_mean_distance <- soil_cores |>
   summarize(means_by_distance = mean(mean_pb_ppm), .by = close) |>
@@ -112,8 +156,6 @@ soil_mean_distance <- soil_cores |>
 # Find the observed difference in means
 obs_diff_mean <- soil_mean_distance$means_by_distance[2] -
   soil_mean_distance$means_by_distance[1]
-
-# ASK: DID WE SUBTRACT THESE PROPERLY? HOW TO KNOW?
 
 # Resample observations and recalculate the statistic
 samp_dist <- replicate(
@@ -137,32 +179,33 @@ tibble(diff_means = samp_dist) |>
   ggplot(aes(diff_means)) +
   geom_histogram(binwidth = 5) +
   geom_vline(xintercept = obs_diff_mean, color = 'magenta') +
-  geom_vline(xintercept = area_95ci, linetype = 'dashed')
+  geom_vline(xintercept = area_95ci, linetype = 'dashed') +
+  labs(
+    title = "Sampling Distribution",
+    x = "Difference in means",
+    y = "Count"
+  ) +
+  theme_bw()
 ```
 
 ### Interpreting our results
-Based on your confidence interval, how much could the difference in lead exposure between close and far away be?
 
-2.5%     97.5% 
- 40.70573 102.95075 
-
-Def of confidence interval - Range of values you are confident contain the pop parameter. If repeated 100 times, about 95 of those confidence intervals would contain population parameter
-
-Our confidence interval estimates that 95% of time, the difference in lead exposure between properties within 1km of a freeway and those farther away will fall within the the interval 40.7 ppm and 102.95 ppm. 
-
-if you repeat the same sampling 100, 95% of resulting intervals will capture the true population parameter 
-
-we are 95% confident that the true diff in avd lead soil concen bw propertiees within 1km of a freeway and those farther away lies between 40.70573 and 102.95075 ppm. 
-
+We are 95% confident that the true difference in lead exposure between properties within 1km of a freeway and those farther away falls within the the interval 40.71 ppm and 102.95 ppm. 
 
 ## 3. Simulate a negative result
+
+ - [X] All necessary code is included in the Quarto document
+ - [X] The code correctly simulates a negative result
+ - [X] The PDF describing the population is visualized appropriately
+ - [X] The p-values for each simulation are calculated correctly
+ - [X] The distribution of p-values is visualized appropriately
+    - [ ] The p-values corresponding to _false positives_ are indicated
 
 Recall that a p-value is the probability of observing your sample _if_ the null hypothesis is true. Therefore, if you draw a sample from two groups that part of the same population, you should get a p values less than 0.05 only 5% of the time. In other words, a negative result (no actual difference) will yield a significant p-value at the 0.05 threshold in 5% of samples. This is known as the **false positive rate**.
 
 To simulate a negative result, perform the following.
 
 1. Define a normally-distributed population. Pick any mean and standard deviation.
-
 2. Draw a sample of 50 observations from this population. Assign the first 25 to group A and the second 25 to group B.
 
 ```{r}
@@ -178,6 +221,17 @@ obs_diff_m <- mean(group_a) - mean(group_b)
 ```{r}
 # Put them together
 pooled <- c(group_a, group_b)
+
+# Visualize the PDF describing the population
+tibble(pooled) |> 
+  ggplot(aes(pooled)) +
+  geom_density(fill = "cornflowerblue", alpha = .05, color = "darkblue") +
+  labs(
+    title = "Probability Density Function",
+    x = "Observed Values",
+    y = "Density"
+  ) +
+  theme_bw()
 
 # Shuffle them up
 shuffle_pool <- sample(pooled)
@@ -211,8 +265,6 @@ p <- mean(ab_null_dist > obs_diff_m)
 5. Repeat the simulation 1,000 times.
 
 ```{r}
-# Nested replicate call, or write a function that does this simulation once then replicate that function 1000x
-
 p_dist <- replicate(
   1000,
   {
@@ -220,7 +272,7 @@ p_dist <- replicate(
     group_b <- rnorm(n = 25, mean = 50, sd = 2)
     obs_diff_m <- mean(group_a) - mean(group_b)
     null_dist <- replicate(
-      1000,
+      1e4,
       {
         pooled <- c(group_a, group_b)
         shuffle_pool <- sample(pooled)
@@ -241,7 +293,7 @@ When you're done, verify that your p-value is less than 0.05 in approximately 5%
 
 tibble(p_dist) |>
   ggplot(aes(p_dist)) +
-  geom_histogram(fill = "cornflowerblue", color = "black", binwidth = .02) +
+  geom_histogram(fill = "cornflowerblue", color = "black", binwidth = .05) +
   geom_vline(xintercept = .05, color = 'magenta') +
   labs(
     title = "Distribution of p-values",
@@ -250,5 +302,6 @@ tibble(p_dist) |>
   )
 
 # Verify 
-mean(p_dist < .05)
+verify <- mean(p_dist < .05)
+verify
 ```
