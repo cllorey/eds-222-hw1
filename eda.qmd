@@ -1,0 +1,234 @@
+---
+title: "EDS 222 Final Project: Exploratory Data Analysis"
+subtitle: ""
+author: "Courtney Lorey"
+date: 2026-10-10
+---
+
+## 1. Your question
+
+1. What environmental question are you curious about? State it in one sentence.
+
+Between 2012 and 2024, is there a relationship between Alaskan walleye pollock biomass (as reported by NOAA Stock Smart) and fishing activity (as reported by Global Fishing Watch) in the United States?
+
+2. Why does this question matter, and to whom? Who would make a different decision depending on the answer?
+
+Walleye pollock is the nation's largest commercial fishery by volume, operating primarily out of Alaska. NOAA Fisheries' 2023 stock assessments in both the Gulf of Alaska and the eastern Bering Sea list walleye pollock as not overfished. This question is an (admittedly oversimplified) investigation into whether or not fishing activity in Alaska may be having an impact on the overall health of the walleye pollock population, or if there is sufficient evidence to suggest it has been fished at sustainable levels over the past 13 years of reporting data.
+
+While this is the starting point for my EDA, I am also considering another project looking at fishing activity in high seas protected area candidate sites compared to other non-candidate high seas pockets. 
+
+3. What do you already know about this topic? Name at least one source (e.g., a paper, report, or news article) that gives context for your question.
+
+I know less about this fishery in particular, but am interested in using data from [Global Fishing Watch](https://globalfishingwatch.org/) to investigate a relationship between fishing activity and fish stock health.
+
+4. What is your **response** variable? What is the main **explanatory** variable you think influences it?
+
+The response variable is walleye pollock biomass, and the main explanatory variable that I believe influences it is fishing activity. 
+
+## 2. Your data
+
+1. What dataset(s) will you use to answer your question? Provide the source and a link.
+
+I will use NOAA Fisheries Stock SMART Data on walleye pollock from 2012-2025 and Global Fishing Watch (GFW) data on fishing activity in Alaska from 2012-2025. I chose this date range as 2012 is the earliest year for which GFW has data.
+
+Links:
+- [Global Fishing Watch](https://globalfishingwatch.org/)
+- [NOAA Stock SMART](https://apps-st.fisheries.noaa.gov/stocksmart?app=download-data)
+
+2. Who collected these data, how, and why? How might the way the data were collected affect what you can learn from them?
+
+GFW uses satellite technology, machine learning, and publicly available data to track human activity at sea, combat illegal fishing, and promote ocean sustainability. They are a non-profit founded by Oceana, SkyTruth and Google. Time constraints of this data prevent me from evaluating fishing effort before 2012.
+ 
+NOAA Stock SMART is a public access point for information related to stock "Status, Management, Assessment, and Resources Trends." It compiles data from independent fisheries stock assessments stored in NOAA Fisheries’ centralized records database, the Species Information System (SIS).
+
+3. What does one row in your data represent (e.g., one site, one year, one sample)? How many rows are there?
+
+For GFW: One row is equal to one vessel's information and total fishing hours in a defined time period (specified when downloading the data).
+
+For Stock SMART: One row is equal to one year of walleye stock data at a specific stock location (e.g., the first row is Walleye pollock - Aleutian Islands in 2012, the second row is Walleye pollock - Aleutian Islands in 2013, and so on)
+
+4. Download the data and read it into R. Include the code for cleaning your data, or joining it if you have multiple sources.
+
+```{r}
+# Load packages
+library(tidyverse)
+
+# Load data
+gfw2012 <- read_csv('/home/clorey/MEDS/data/2012_fishing-hours-United States Exclusive Economic Zone (Alaska)-2012-01-01T00_00_00.000Z-2013-01-01T00_00_00.000Z.csv')
+gfw2013 <- read_csv('/home/clorey/MEDS/data/2013_fishing-hours-United States Exclusive Economic Zone (Alaska)-2013-01-01T00_00_00.000Z-2014-01-01T00_00_00.000Z.csv')
+gfw2014 <- read_csv('/home/clorey/MEDS/data/2014_fishing-hours-United States Exclusive Economic Zone (Alaska)-2014-01-01T00_00_00.000Z-2015-01-01T00_00_00.000Z.csv')
+gfw2015 <- read_csv('/home/clorey/MEDS/data/2015_fishing-hours-United States Exclusive Economic Zone (Alaska)-2015-01-01T00_00_00.000Z-2016-01-01T00_00_00.000Z.csv')
+gfw2016 <- read_csv('/home/clorey/MEDS/data/2016_fishing-hours-United States Exclusive Economic Zone (Alaska)-2016-01-01T00_00_00.000Z-2017-01-01T00_00_00.000Z.csv')
+gfw2017 <- read_csv('/home/clorey/MEDS/data/2017_fishing-hours-United States Exclusive Economic Zone (Alaska)-2017-01-01T00_00_00.000Z-2018-01-01T00_00_00.000Z.csv')
+gfw2018 <- read_csv('/home/clorey/MEDS/data/2018_fishing-hours-United States Exclusive Economic Zone (Alaska)-2018-01-01T00_00_00.000Z-2019-01-01T00_00_00.000Z.csv')
+gfw2019 <- read_csv('/home/clorey/MEDS/data/2019_fishing-hours-United States Exclusive Economic Zone (Alaska)-2019-01-01T00_00_00.000Z-2020-01-01T00_00_00.000Z.csv')
+gfw2020 <- read_csv('/home/clorey/MEDS/data/2020_fishing-hours-United States Exclusive Economic Zone (Alaska)-2020-01-01T00_00_00.000Z-2021-01-01T00_00_00.000Z.csv')
+gfw2021 <- read_csv('/home/clorey/MEDS/data/2021_fishing-hours-United States Exclusive Economic Zone (Alaska)-2021-01-01T00_00_00.000Z-2022-01-01T00_00_00.000Z.csv')
+gfw2022 <- read_csv('/home/clorey/MEDS/data/2022_fishing-hours-United States Exclusive Economic Zone (Alaska)-2022-01-01T00_00_00.000Z-2023-01-01T00_00_00.000Z.csv')
+gfw2023 <- read_csv('/home/clorey/MEDS/data/2023_fishing-hours-United States Exclusive Economic Zone (Alaska)-2023-01-01T00_00_00.000Z-2024-01-01T00_00_00.000Z.csv')
+gfw2024 <- read_csv('/home/clorey/MEDS/data/2024_fishing-hours-United States Exclusive Economic Zone (Alaska)-2024-01-01T00_00_00.000Z-2025-01-01T00_00_00.000Z.csv')
+noaa_raw <- read_csv('/home/clorey/MEDS/data/Assessment_TimeSeries_Data.csv')
+
+# Filter NOAA to columns of interest. The selected columns are accounting for walleye pollock abundance (using spawning stock biomass) in metric tons in different locations.
+noaa_filtered <- noaa_raw |> 
+    select(2, 6, 10, 16) |> 
+    rename(year = 1) |> 
+    mutate(year = as.numeric(year))
+
+# Rename columns for clarity, filter for relevant rows, convert str to dbl 
+noaa <- noaa_filtered |> 
+    rename(
+        aleutian_biomass_metric_tons = 2,
+        eastern_bering_biomass_metric_tons = 3,
+        yakutat_gulf_biomass_metric_tons = 4
+    ) |> 
+    slice(56:68) |> 
+    mutate(across(ends_with("_metric_tons"), as.numeric),
+         total_pollock_biomass = aleutian_biomass_metric_tons +
+           eastern_bering_biomass_metric_tons +
+           yakutat_gulf_biomass_metric_tons)
+
+# Add a year column to the GFW datasets
+gfw2012 <- gfw2012 |> 
+    mutate(year = 2012) |> 
+    select(-MMSI)
+
+gfw2013 <- gfw2013 |> 
+    mutate(year = 2013) |> 
+    select(-MMSI)
+
+gfw2014 <- gfw2014 |> 
+    mutate(year = 2014) |> 
+    select(-MMSI)
+
+gfw2015 <- gfw2015 |> 
+    mutate(year = 2015) |> 
+    select(-MMSI)
+
+gfw2016 <- gfw2016 |> 
+    mutate(year = 2016) |> 
+    select(-MMSI)
+
+gfw2017 <- gfw2017 |> 
+    mutate(year = 2017) |> 
+    select(-MMSI)
+
+gfw2018 <- gfw2018 |> 
+    mutate(year = 2018) |> 
+    select(-MMSI)
+
+gfw2019 <- gfw2019 |> 
+    mutate(year = 2019) |> 
+    select(-MMSI)
+
+gfw2020 <- gfw2020 |> 
+    mutate(year = 2020) |> 
+    select(-MMSI)
+
+gfw2021 <- gfw2021 |> 
+    mutate(year = 2021) |> 
+    select(-MMSI)
+
+gfw2022 <- gfw2022 |> 
+    mutate(year = 2022) |> 
+    select(-MMSI)
+
+gfw2023 <- gfw2023 |> 
+    mutate(year = 2023) |> 
+    select(-MMSI)
+
+gfw2024 <- gfw2024 |> 
+    mutate(year = 2024) |> 
+    select(-MMSI)
+
+# Join GFW data
+# gfw <- full_join(gfw2012, gfw2024)
+gfw <- bind_rows(gfw2012, gfw2013, gfw2014, gfw2015, gfw2016, 
+                      gfw2017, gfw2018, gfw2019, gfw2020, gfw2021, 
+                      gfw2022, gfw2023, gfw2024)
+
+# Filter for fishing activity and relevant columns, find the total number of fishing hours per year 
+gfw_sums <- gfw |> 
+    filter(`GFW vessel type` == "Fishing") |> 
+    select(`Total fishing hours`, year) |> 
+    summarize(annual_fishing_hours = sum(`Total fishing hours`), .by = year)
+
+# Join GFW and NOAA data 
+noaa_gfw <- left_join(noaa, gfw_sums, by = join_by(year))
+
+```
+
+## 3. Numerical summaries
+
+1. Summarize your response and explanatory variables numerically (e.g., mean, median, standard deviation, range, counts per category).
+
+```{r}
+summary_table <- summary(noaa_gfw)
+```
+
+2. How much data is missing? Is the missingness concentrated in particular places, times, or groups? What might cause it?
+
+I had to leave out the Southeast Gulf of Alaska region from this table because it used survey-estimated biomass instead of spawning stock biomass, and therefore can't be directly compared. I am "missing" fishing effort data from before 2012 as that is the first year of GFW data. This is unfortunate because some of the pollock biomass assessments go back to the 60s! 
+
+3. Are there any values that seem implausible or surprising?
+
+Nothing seems implausible about the values I've seen thus far.
+
+## 4. Graphical summaries
+
+1. Visualize the **distribution** of your response variable. Describe its shape (e.g., symmetric, skewed, bounded by zero).
+
+```{r}
+ggplot(data = noaa, mapping = aes(x = year, y = total_pollock_biomass)) +
+    geom_line() +
+    scale_x_continuous(breaks = unique(noaa$year)) +
+    labs(title = "Total Alaska pollock biomass over time", x = "Year", y = "Biomass (t)") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+2. Visualize the **relationship** between your response and explanatory variables. Describe what you see.
+
+```{r}
+noaa_gfw |>
+  pivot_longer(c(total_pollock_biomass, annual_fishing_hours),
+               names_to = "variable", values_to = "value") |>
+  mutate(variable = recode(variable,
+                           total_pollock_biomass = "Total biomass (t)",
+                           annual_fishing_hours = "Fishing effort (hours)")) |>
+  ggplot(aes(x = year, y = value)) +
+  geom_line() +
+  facet_wrap(~ variable, ncol = 1, scales = "free_y") +
+  scale_x_continuous(breaks = unique(noaa_gfw$year)) +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(title = "Alaska pollock biomass and fishing effort", x = "Year", y = NULL) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+While I would expect to see an inverse relationship between fishing effort and pollock biomass, there is not an immediately obvious relationship between these two variables. It looks like a peak of fishing effort occured in 2016, but biomass did not start decreasing until 2017. As a next step, I would want to look into the lag time between fishing effort and population impacts. It does appear that as fishing effort started decreasing in 2021, biomass started increasing. 
+
+3. Make at least one more figure that shows something about your data you think is important (e.g., variation over space or time, differences between groups, a potential confounding variable).
+
+```{r}
+# Region-specific (though fishing hours are across all of Alaska's EEZ)
+
+noaa_gfw |>
+  pivot_longer(c(eastern_bering_biomass_metric_tons, annual_fishing_hours),
+               names_to = "variable", values_to = "value") |>
+  mutate(variable = recode(variable,
+                           eastern_bering_biomass_metric_tons = "Total biomass (t)",
+                           annual_fishing_hours = "Fishing effort (hours)")) |>
+  ggplot(aes(x = year, y = value)) +
+  geom_line() +
+  facet_wrap(~ variable, ncol = 1, scales = "free_y") +
+  scale_x_continuous(breaks = unique(noaa_gfw$year)) +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(title = "Pollock biomass in the eastern Bering Sea and fishing effort", x = "Year", y = NULL) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+This figure looks largely the same as the one from question 2, just with slightly lower numbers across the board.
+
+I'm not certain I'm heading in the right direction with this project - I am considering exploring a new question or refining my approach to this one. 
