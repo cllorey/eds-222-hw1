@@ -190,7 +190,12 @@ tibble(diff_means = samp_dist) |>
 
 ### Interpreting our results
 
-We are 95% confident that the true difference in lead exposure between properties within 1km of a freeway and those farther away falls within the the interval 40.71 ppm and 102.95 ppm. 
+New interpretation:
+If we ran the bootstrapping experiment 100 times, the resulting intervals would contain the true parameter in about 95% of repeated samples. 
+
+Old interpretation:
+We are 95% confident (in the method) that the true difference in lead exposure between properties within 1km of a freeway and those farther away falls within the the interval 40.71 ppm and 102.95 ppm. 
+
 
 ## 3. Simulate a negative result
 
@@ -291,9 +296,9 @@ When you're done, verify that your p-value is less than 0.05 in approximately 5%
 ```{r}
 # Visualize 
 
-tibble(p_dist) |>
-  ggplot(aes(p_dist)) +
-  geom_histogram(fill = "cornflowerblue", color = "black", binwidth = .05) +
+tibble(p = p_dist) |>
+  ggplot(aes(p, fill = p_dist < 0.05)) +
+  geom_histogram() +
   geom_vline(xintercept = .05, color = 'magenta') +
   labs(
     title = "Distribution of p-values",

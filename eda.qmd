@@ -190,6 +190,13 @@ ggplot(data = noaa, mapping = aes(x = year, y = total_pollock_biomass)) +
 2. Visualize the **relationship** between your response and explanatory variables. Describe what you see.
 
 ```{r}
+test <- noaa_gfw |>
+  pivot_longer(c(total_pollock_biomass, annual_fishing_hours),
+               names_to = "variable", values_to = "value") |>
+  mutate(variable = recode(variable,
+                           total_pollock_biomass = "Total biomass (t)",
+                           annual_fishing_hours = "Fishing effort (hours)"))
+
 noaa_gfw |>
   pivot_longer(c(total_pollock_biomass, annual_fishing_hours),
                names_to = "variable", values_to = "value") |>
@@ -232,3 +239,16 @@ noaa_gfw |>
 This figure looks largely the same as the one from question 2, just with slightly lower numbers across the board.
 
 I'm not certain I'm heading in the right direction with this project - I am considering exploring a new question or refining my approach to this one. 
+
+Oct 15-16 Office Hours:
+
+Plotting fishing effort on X, pollock biomass on Y, points as years
+```{r}
+noaa_gfw |> 
+    ggplot(aes(x = annual_fishing_hours, y = total_pollock_biomass, label = year)) + 
+    geom_point() +
+    labs(title = "Alaska pollock biomass and fishing effort", x = "Fishing Effort (hours)", y = "Pollock Biomass (t)") +
+    scale_x_continuous(labels = scales::label_comma()) +
+    scale_y_continuous(labels = scales::label_comma()) +
+    theme_bw()
+```
